@@ -1,0 +1,162 @@
+﻿@page "/todolist"
+@using Microsoft.AspNetCore.Components.QuickGrid
+
+
+<PageTitle>To Do List Table</PageTitle>
+
+<h1>To do LIST</h1>
+
+<div class="container">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <EditForm Model="elemento" OnSubmit="AddTask" Enhance>
+                        <div class="hstack gap-12">
+                            <label class="label-control">Tarea</label>
+                            <InputText @bind-Value="elemento.tarea" class="form-control"></InputText>
+                            <label class="label-control">Descripcion</label>
+                            <InputText @bind-Value="elemento.descripcion" class="form-control"></InputText>
+                            <label class="label-control">Imagen</label>
+                            <InputText @bind-Value="elemento.imagen" class="form-control"></InputText>
+                            <label class="label-control">Fecha</label>
+                            <InputDate @bind-Value="SelectedDate" class="form-control "></InputDate>
+                            <label class="label-control">Estado</label>
+                            <InputText @bind-Value="elemento.estado" class="form-control"></InputText>
+                            <button type="submit" class="btn btn-primary">Agregar Tarea</button>
+                        </div>
+                    </EditForm>
+                </div>
+                <div class="card-body">
+                    <QuickGrid Items="@TaskQueryable" Pagination="pagination">
+                        <PropertyColumn Property="@(p => p.taskId)" Sortable="true" Align="Align.Center" />
+                        <PropertyColumn Property="@(c => c.tarea)" Sortable="true" Class="country-name">
+                            <ColumnOptions>
+                                <div class="search-box">
+                                    <input type="search" autofocus @onchange="SearchTask" placeholder="Task..." />
+                                </div>
+                            </ColumnOptions>
+                        </PropertyColumn>
+                        <PropertyColumn Property="@(c => c.descripcion)" Sortable="false" Class="country-name"/>
+                        <PropertyColumn Property="@(c => c.imagen)" Sortable="false" Class="country-name" />
+                        <PropertyColumn Property="@(p => p.fecha)" Format="dd-MM-yyyy HH:mm" Sortable="true" />
+                        <PropertyColumn Property="@(c => c.estado)" Sortable="false" Class="country-name" />
+                        <PropertyColumn Title="terminado" Property="@(c => Computefecha(c.fecha))" Sortable="true" Align="Align.Right" />
+                        <TemplateColumn Title="Action">
+                            <button @onclick="@(() => Edit(context))" class="btn btn-info">Edit</button>
+                            <button @onclick="@(() => Delete(context))" class="btn btn-danger">Delete</button>
+                        </TemplateColumn>
+                    </QuickGrid>
+                </div>
+                <div class="card-footer"><Paginator State="@pagination" /></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+@code {
+
+    PaginationState pagination = new PaginationState { ItemsPerPage = 3 };
+    IQueryable<ToDo> TaskQueryable = Enumerable.Empty<ToDo>().AsQueryable();
+
+    [SupplyParameterFromForm]
+    ToDo elemento { get; set; } = new();
+    DateTime SelectedDate;
+    static List<ToDo> TaskList = new();
+
+    protected override void OnInitialized()
+    {
+        ConvertListToQueryable();
+
+    }
+
+    async Task AddTask()
+    {
+        elemento.fecha = SelectedDate;
+
+        if (elemento.taskId > 0)
+        {
+            var p = TaskList.FirstOrDefault(_ => _.taskId == elemento.taskId);
+            if (p is null) return;
+            TaskList.Remove(p); TaskList.Add(elemento); elemento = new();
+            GetDataAgain();
+            return;
+        }
+
+        if (elemento.tarea is null) return;
+        elemento.taskId = TaskList.Count + 1;
+        TaskList.Add(elemento);
+        elemento = new();
+        GetDataAgain();
+        return;
+    }
+
+    private void ConvertListToQueryable()
+    {
+        if (TaskList is null) return;
+        foreach (var person in TaskList.OrderBy(_ => _.taskId))
+        {
+            TaskQueryable = TaskQueryable.Concat(new[] { person }.AsQueryable());
+        }
+        pagination.TotalItemCountChanged += (sender, eventArgs) => StateHasChanged();
+    }
+
+    void GetDataAgain()
+    {
+        TaskQueryable = Enumerable.Empty<ToDo>().AsQueryable();
+        ConvertListToQueryable();
+    }
+
+    void Edit(ToDo incomingModel)
+    {
+        SelectedDate = incomingModel.fecha;
+        elemento = incomingModel;
+    }
+
+    void Delete(ToDo incomingModel)
+    {
+        TaskList.Remove(TaskList.FirstOrDefault(_ => _.taskId == incomingModel.taskId));
+        if (TaskList is null) return;
+        GetDataAgain();
+    }
+
+
+    int Computefecha(DateTime terminado)
+    {
+        int result = DateTime.Compare(terminado, DateTime.Now);
+        return result;
+    }
+
+    void SearchTask(ChangeEventArgs e)
+    {
+        if (!string.IsNullOrEmpty(e.Value!.ToString()))
+        {
+            var result = TaskList.Where(c => c.tarea!.Contains(e.Value!.ToString()!, StringComparison.CurrentCultureIgnoreCase)).ToList();
+            TaskQueryable = Enumerable.Empty<ToDo>().AsQueryable();
+            if (result.Count == 0)
+            {
+                return;
+            }
+
+            if (result.Any())
+            {
+                foreach (var person in result.OrderBy(_ => _.taskId))
+                    TaskQueryable = TaskQueryable.Concat(new[] { person }.AsQueryable());
+            }
+            return;
+        }
+        GetDataAgain();
+    }
+
+    public class ToDo
+    {
+        public int taskId { get; set; }
+        public string? tarea { get; set; }
+        public string? descripcion { get; set; }
+        public string? imagen { get; set; }
+        public DateTime fecha { get; set; }
+        public string? estado { get; set; }
+    };
+}
