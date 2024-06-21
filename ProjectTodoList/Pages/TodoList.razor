@@ -18,7 +18,7 @@
                             <label class="label-control">Descripcion</label>
                             <InputText @bind-Value="elemento.descripcion" class="form-control"></InputText>
                             <label class="label-control">Imagen</label>
-                            <InputText @bind-Value="elemento.imagen" class="form-control"></InputText>
+                            <InputFile @bind-Value="elemento.imagen" class="form-control"></InputFile>
                             <label class="label-control">Fecha</label>
                             <InputDate @bind-Value="SelectedDate" class="form-control "></InputDate>
                             <label class="label-control">Estado</label>
@@ -29,18 +29,18 @@
                 </div>
                 <div class="card-body">
                     <QuickGrid Items="@TaskQueryable" Pagination="pagination">
-                        <PropertyColumn Property="@(p => p.taskId)" Sortable="true" Align="Align.Center" />
-                        <PropertyColumn Property="@(c => c.tarea)" Sortable="true" Class="country-name">
+                        <PropertyColumn Property="@(p => p.taskId)" Sortable="false" Align="Align.Center" />
+                        <PropertyColumn Property="@(c => c.tarea)" Sortable="false" Class="country-name">
                             <ColumnOptions>
                                 <div class="search-box">
                                     <input type="search" autofocus @onchange="SearchTask" placeholder="Task..." />
                                 </div>
                             </ColumnOptions>
                         </PropertyColumn>
-                        <PropertyColumn Property="@(c => c.descripcion)" Sortable="false" Class="country-name"/>
+                        <PropertyColumn Property="@(c => c.descripcion)" Sortable="true" Class="country-name"/>
                         <PropertyColumn Property="@(c => c.imagen)" Sortable="false" Class="country-name" />
                         <PropertyColumn Property="@(p => p.fecha)" Format="dd-MM-yyyy HH:mm" Sortable="true" />
-                        <PropertyColumn Property="@(c => c.estado)" Sortable="false" Class="country-name" />
+                        <PropertyColumn Property="@(c => c.estado)" Sortable="true" Class="country-name" />
                         <PropertyColumn Title="terminado" Property="@(c => Computefecha(c.fecha))" Sortable="true" Align="Align.Right" />
                         <TemplateColumn Title="Action">
                             <button @onclick="@(() => Edit(context))" class="btn btn-info">Edit</button>
@@ -57,13 +57,14 @@
 
 
 @code {
-
-    PaginationState pagination = new PaginationState { ItemsPerPage = 3 };
+    //serverside
+    PaginationState pagination = new PaginationState { ItemsPerPage = 10 };
     IQueryable<ToDo> TaskQueryable = Enumerable.Empty<ToDo>().AsQueryable();
 
     [SupplyParameterFromForm]
     ToDo elemento { get; set; } = new();
     DateTime SelectedDate;
+    
     static List<ToDo> TaskList = new();
 
     protected override void OnInitialized()
